@@ -7,6 +7,9 @@ dotenv.config();
 const app = express();
 const PORT = process.env.PORT || 3000;
 
+//middleware
+app.use(express.json());
+
 async function initDB() {
   try {
     await sql`CREATE TABLE IF NOT EXISTS transactions(
@@ -26,6 +29,25 @@ async function initDB() {
 
 app.get("/", (req, res) => {
   res.send("Hello, World!");
+});
+
+app.post("/api/transactions", async (req, res) => {
+  try {
+    const { user_id, title, amount, category } = req.body;
+    if (!user_id || !title || amount === undefined || !category) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+    const transactions = await sql`
+    INSERT INTO transactions (user_id, title, amount, category)
+    VALUES (${user_id}, ${title}, ${amount}, ${category})
+    RETURNING *`;
+
+    console.log("Transaction created:", transactions);
+    res.status(201).json(transactions[0]);
+  } catch (err) {
+    console.error("Error creating transaction:", err);
+    res.status(500).json({ error: "Failed to create transaction" });
+  }
 });
 
 initDB().then(() => {
